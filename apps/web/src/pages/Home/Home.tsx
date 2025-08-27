@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../app/store/auth.store";
 import {
   FaUser, FaSignOutAlt, FaShieldAlt, FaBell, FaCog, FaSearch,
@@ -37,7 +38,17 @@ type Suggestion = {
 };
 
 const Home: React.FC = () => {
-  const { user, logout, checkAuth } = useAuthStore();
+  const { user, logout, checkAuth, token } = useAuthStore();
+  const navigate = useNavigate();
+
+  // Si on arrive sur Home sans user ni token (cas edge où ProtectedRoute a rendu
+  // l'enfant), rediriger immédiatement vers le login pour éviter l'affichage
+  // d'un état de chargement infini.
+  useEffect(() => {
+    if (!user && !token) {
+      navigate('/login', { replace: true });
+    }
+  }, [user, token, navigate]);
   const [activeTab, setActiveTab] = useState<'feed' | 'discover'>('feed');
   const [posts, setPosts] = useState<Post[]>([]);
   const [trends, setTrends] = useState<Trend[]>([]);
@@ -49,7 +60,6 @@ const Home: React.FC = () => {
 
     // Déboguer l'objet utilisateur pour comprendre sa structure
     if (user) {
-      console.log('🔍 Home - Structure de l\'objet utilisateur:', user);
     } else {
       console.warn('⚠️ Home - L\'objet utilisateur est null ou undefined');
     }
@@ -201,14 +211,6 @@ const Home: React.FC = () => {
       </div>
     );
   }
-
-  // Vérifier que user contient toutes les propriétés nécessaires
-  console.log('📊 Home - Vérification des propriétés utilisateur:', {
-    hasId: !!user.id,
-    hasEmail: !!user.email,
-    hasDisplayName: !!user.displayName,
-    has2FA: user.twoFAEnabled !== undefined
-  });
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">

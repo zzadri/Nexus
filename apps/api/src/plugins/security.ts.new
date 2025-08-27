@@ -15,7 +15,6 @@ export default fp(async (app) => {
     origin(origin, cb) {
       // En dev, on accepte n'importe quelle origine pour faciliter les tests
       if (env.NODE_ENV === 'development') {
-        console.log('Mode développement: CORS autorise toutes les origines');
         return cb(null, true);
       }
 
@@ -29,7 +28,6 @@ export default fp(async (app) => {
         `http://127.0.0.1:${env.PORT}`,
       ]);
 
-      console.log(`CORS check origin: ${origin}, allowed: ${allowed.has(origin)}`);
       cb(null, allowed.has(origin));
     },
     credentials: true,

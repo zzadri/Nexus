@@ -14,8 +14,6 @@ export function useCsrfToken() {
     // Toujours récupérer un nouveau token CSRF au montage du composant
     setIsLoading(true);
     fetchToken().then(() => {
-      // Afficher le token CSRF pour debugging
-      console.log('CSRF Token récupéré:', useCsrfStore.getState().token);
     }).finally(() => setIsLoading(false));
   }, [fetchToken]);
 

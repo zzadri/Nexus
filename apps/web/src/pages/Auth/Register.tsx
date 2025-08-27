@@ -37,13 +37,10 @@ const Register: React.FC = () => {
 
     // Rediriger si déjà connecté
     useEffect(() => {
-        console.log('🔄 Register - État d\'authentification changé:', { isAuthenticated });
         if (isAuthenticated) {
-            console.log('📲 Register - Redirection vers la page d\'accueil');
-            // Forcer la redirection vers la page d'accueil
+            // Forcer la redirection vers le feed
             setTimeout(() => {
-                console.log('⏱️ Register - Redirection forcée après délai');
-                navigate("/", { replace: true });
+                navigate("/feed", { replace: true });
             }, 100);
         }
     }, [isAuthenticated, navigate]);
@@ -147,7 +144,7 @@ const Register: React.FC = () => {
             });
 
             if (success) {
-                navigate("/");
+                navigate("/feed");
             }
         } catch (err) {
             if (err instanceof ApiError && err.status === 403) {

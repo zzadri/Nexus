@@ -25,8 +25,6 @@ export const csrfGuard: FastifyPluginAsync = async (app) => {
     const header = req.headers['x-csrf-token'];
     const cookie = req.cookies?.[env.CSRF_COOKIE_NAME];
 
-    console.log('CSRF check >', req.url, '| Header:', header, '| Cookie:', cookie);
-
     if (!header || !cookie || header !== cookie) {
       res.code(403);
       console.error('CSRF token invalid >', 'Header:', header, 'Cookie:', cookie);
@@ -48,11 +46,6 @@ export const csrfGuard: FastifyPluginAsync = async (app) => {
     },
   }, async (_req, res) => {
     const token = crypto.randomBytes(24).toString('base64url');
-
-    console.log('Génération nouveau token CSRF:', token);
-
-    // 👇 setCookie est typé via @fastify/cookie
-    console.log('🔑 Génération nouveau token CSRF:', token, 'domaine:', env.COOKIE_DOMAIN || 'default');
 
     res.setCookie(env.CSRF_COOKIE_NAME, token, {
       httpOnly: false,           // token lisible par le front

@@ -19,12 +19,9 @@ const Login: React.FC = () => {
   // Rediriger si déjà connecté
   // Rediriger si déjà connecté
   useEffect(() => {
-    console.log('🔄 Login - État d\'authentification changé:', { isAuthenticated });
     if (isAuthenticated) {
-      console.log('📲 Login - Redirection vers home');
       // Forcer la redirection vers la page d'accueil
       setTimeout(() => {
-        console.log('⏱️ Login - Redirection forcée après délai');
         navigate("/home", { replace: true });
       }, 100);
     }
@@ -32,44 +29,24 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('🔄 Login - Tentative de soumission du formulaire');
 
     if (!email || !password || !csrfToken) {
-      console.warn('❌ Login - Données de formulaire incomplètes:', {
-        hasEmail: !!email,
-        hasPassword: !!password,
-        hasCsrfToken: !!csrfToken
-      });
       return;
     }
 
     try {
       setCsrfError(false);
-      console.log('🔄 Login - Appel à la fonction login du store');
       const success = await login({ email, password, csrfToken });
-      console.log('📊 Login - Résultat de la tentative de connexion:', { success });
-
-      // Vérifier l'état d'authentification après la connexion
-      const currentState = useAuthStore.getState();
-      console.log('🔍 Login - État actuel après tentative:', {
-        isAuthenticated: currentState.isAuthenticated,
-        hasUser: !!currentState.user,
-        hasToken: !!currentState.token
-      });
 
       if (success) {
-        console.log('📲 Login - Tentative de redirection manuelle vers la page d\'accueil');
         setTimeout(() => {
-          console.log('⏱️ Login - Forçage de la redirection après délai');
-          window.location.href = '/'; // Redirection forcée en dernier recours
+          window.location.href = '/feed'; // Redirection forcée en dernier recours
         }, 300);
       }
     } catch (err) {
-      console.error('❌ Login - Erreur lors de la tentative de connexion:', err);
 
       if (err instanceof ApiError && err.status === 403) {
         setCsrfError(true);
-        console.log('🔄 Login - Tentative de rafraîchissement du token CSRF après erreur 403');
         await refreshToken();
       }
     }
