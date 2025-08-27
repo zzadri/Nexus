@@ -17,29 +17,59 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
 
   // Rediriger si déjà connecté
+  // Rediriger si déjà connecté
   useEffect(() => {
+    console.log('🔄 Login - État d\'authentification changé:', { isAuthenticated });
     if (isAuthenticated) {
-      navigate("/dashboard");
+      console.log('📲 Login - Redirection vers dashboard');
+      // Forcer la redirection vers le dashboard
+      setTimeout(() => {
+        console.log('⏱️ Login - Redirection forcée après délai');
+        navigate("/dashboard", { replace: true });
+      }, 100);
     }
   }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🔄 Login - Tentative de soumission du formulaire');
 
     if (!email || !password || !csrfToken) {
+      console.warn('❌ Login - Données de formulaire incomplètes:', { 
+        hasEmail: !!email, 
+        hasPassword: !!password, 
+        hasCsrfToken: !!csrfToken 
+      });
       return;
     }
 
     try {
       setCsrfError(false);
+      console.log('🔄 Login - Appel à la fonction login du store');
       const success = await login({ email, password, csrfToken });
+      console.log('📊 Login - Résultat de la tentative de connexion:', { success });
+      
+      // Vérifier l'état d'authentification après la connexion
+      const currentState = useAuthStore.getState();
+      console.log('🔍 Login - État actuel après tentative:', { 
+        isAuthenticated: currentState.isAuthenticated,
+        hasUser: !!currentState.user,
+        hasToken: !!currentState.token
+      });
+      
       if (success) {
-        navigate("/dashboard");
+        console.log('📲 Login - Tentative de redirection manuelle vers dashboard');
+        setTimeout(() => {
+          console.log('⏱️ Login - Forçage de la redirection après délai');
+          window.location.href = '/dashboard'; // Redirection forcée en dernier recours
+        }, 300);
       }
     } catch (err) {
+      console.error('❌ Login - Erreur lors de la tentative de connexion:', err);
+      
       if (err instanceof ApiError && err.status === 403) {
         setCsrfError(true);
-        // Essayer de rafraîchir le token CSRF
+        console.log('🔄 Login - Tentative de rafraîchissement du token CSRF après erreur 403');
         await refreshToken();
       }
     }

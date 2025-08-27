@@ -9,9 +9,17 @@ const ACCESS_COOKIE = 'access_token';
 const REFRESH_COOKIE = 'refresh_token';
 
 export class AuthService {
-  static verifyCsrfToken(req: FastifyRequest, csrfToken: string): boolean {
+  static verifyCsrfToken(req: FastifyRequest, csrfToken?: string): boolean {
     const cookieToken = req.cookies?.[env.CSRF_COOKIE_NAME];
-    return cookieToken === csrfToken;
+    const headerToken = req.headers['x-csrf-token'] as string | undefined;
+
+    // Si un token est fourni dans le corps de la requête, on le vérifie d'abord (pour compatibilité)
+    if (csrfToken && cookieToken === csrfToken) {
+      return true;
+    }
+
+    // Sinon, on vérifie le header X-CSRF-TOKEN
+    return cookieToken === headerToken;
   }
 
   static async register(email: string, password: string, displayName: string) {

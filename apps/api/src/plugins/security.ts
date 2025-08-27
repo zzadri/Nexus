@@ -1,4 +1,4 @@
-// src/plugins/security.ts (ou équivalent)
+// src/plugins/security.ts
 import fp from 'fastify-plugin';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
@@ -13,7 +13,13 @@ export default fp(async (app) => {
 
   await app.register(cors, {
     origin(origin, cb) {
-      // Pas d’origin => requêtes server-to-server / curl / Swagger via le même host : OK
+      // En dev, on accepte n'importe quelle origine pour faciliter les tests
+      if (env.NODE_ENV === 'development') {
+        console.log('Mode développement: CORS autorise toutes les origines');
+        return cb(null, true);
+      }
+      
+      // Pas d'origin => requêtes server-to-server / curl / Swagger via le même host : OK
       if (!origin) return cb(null, true);
 
       const allowed = new Set([
@@ -23,6 +29,7 @@ export default fp(async (app) => {
         `http://127.0.0.1:${env.PORT}`,
       ]);
 
+      console.log(`CORS check origin: ${origin}, allowed: ${allowed.has(origin)}`);
       cb(null, allowed.has(origin));
     },
     credentials: true,
@@ -44,7 +51,7 @@ export default fp(async (app) => {
 
   app.decorate('cookieBase', {
     httpOnly: true,
-    sameSite: 'strict' as const,
+    sameSite: env.NODE_ENV === 'development' ? 'lax' : 'strict',
     path: '/',
     secure: env.NODE_ENV !== 'development',
     domain: env.COOKIE_DOMAIN || undefined,

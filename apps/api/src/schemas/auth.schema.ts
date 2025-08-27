@@ -9,7 +9,7 @@ export const RegisterBodyZ = z.object({
   password: PasswordZ,
   confirmPassword: PasswordZ,
   displayName: z.string().min(1),
-  csrfToken: z.string().min(1),
+  csrfToken: z.string().min(1).optional(), // Rendu optionnel pour permettre l'utilisation via header
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Les mots de passe ne correspondent pas",
   path: ["confirmPassword"],
@@ -19,7 +19,7 @@ export type RegisterBody = z.infer<typeof RegisterBodyZ>;
 export const LoginBodyZ = z.object({
   email: EmailZ,
   password: z.string().min(1),
-  csrfToken: z.string().min(1),
+  csrfToken: z.string().min(1).optional(), // Rendu optionnel pour permettre l'utilisation via header
 });
 export type LoginBody = z.infer<typeof LoginBodyZ>;
 
@@ -37,23 +37,23 @@ export type TotpVerifyBody = z.infer<typeof TotpVerifyBodyZ>;
 /** JSON Schemas (Swagger/OpenAPI) */
 export const RegisterBodySchema = {
   type: 'object',
-  required: ['email', 'password', 'confirmPassword', 'displayName', 'csrfToken'],
+  required: ['email', 'password', 'confirmPassword', 'displayName'],
   properties: {
     email: { type: 'string', format: 'email' },
     password: { type: 'string', minLength: 12 },
     confirmPassword: { type: 'string', minLength: 12 },
     displayName: { type: 'string', minLength: 1 },
-    csrfToken: { type: 'string', minLength: 1 },
+    csrfToken: { type: 'string', minLength: 1, description: 'Optional - can be provided in X-CSRF-TOKEN header instead' },
   },
 } as const;
 
 export const LoginBodySchema = {
   type: 'object',
-  required: ['email','password','csrfToken'],
+  required: ['email','password'],
   properties: {
     email: { type: 'string', format: 'email' },
     password: { type: 'string' },
-    csrfToken: { type: 'string', minLength: 1 },
+    csrfToken: { type: 'string', minLength: 1, description: 'Optional - can be provided in X-CSRF-TOKEN header instead' },
   },
 } as const;
 

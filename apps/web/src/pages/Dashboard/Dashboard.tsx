@@ -8,6 +8,26 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     // Vérifier l'authentification au chargement
     checkAuth();
+    
+    // Déboguer l'objet utilisateur pour comprendre sa structure
+    if (user) {
+      console.log('🔍 Dashboard - Structure de l\'objet utilisateur:', user);
+    } else {
+      console.warn('⚠️ Dashboard - L\'objet utilisateur est null ou undefined');
+    }
+  }, [checkAuth, user]);
+  
+  // Forcer une vérification supplémentaire de l'authentification
+  useEffect(() => {
+    const checkUserState = async () => {
+      try {
+        await checkAuth();
+      } catch (error) {
+        console.error('❌ Dashboard - Erreur lors de la vérification de l\'authentification:', error);
+      }
+    };
+    
+    checkUserState();
   }, [checkAuth]);
 
   const handleLogout = async () => {
@@ -15,12 +35,27 @@ const Dashboard: React.FC = () => {
   };
 
   if (!user) {
+    console.warn('⚠️ Dashboard - Rendu conditionnel: user est null/undefined');
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-slate-300">Chargement...</div>
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center">
+        <div className="text-slate-300 mb-4">Chargement des informations utilisateur...</div>
+        <button 
+          onClick={() => checkAuth()} 
+          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+        >
+          Rafraîchir
+        </button>
       </div>
     );
   }
+  
+  // Vérifier que user contient toutes les propriétés nécessaires
+  console.log('📊 Dashboard - Vérification des propriétés utilisateur:', {
+    hasId: !!user.id,
+    hasEmail: !!user.email,
+    hasDisplayName: !!user.displayName,
+    has2FA: user.twoFAEnabled !== undefined
+  });
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
@@ -38,7 +73,7 @@ const Dashboard: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <FaUser className="text-slate-400" />
                 <span className="text-sm text-slate-300">
-                  {user.displayName}
+                  {user.displayName || user.email || 'Utilisateur'}
                 </span>
               </div>
 
@@ -59,7 +94,7 @@ const Dashboard: React.FC = () => {
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-white mb-2">
-            Bienvenue, {user.displayName.split(' ')[0]} !
+            Bienvenue, {user.displayName ? user.displayName.split(' ')[0] : 'utilisateur'} !
           </h2>
           <p className="text-slate-400">
             Vous êtes maintenant connecté à votre tableau de bord Nexus.
@@ -75,22 +110,22 @@ const Dashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <div className="block text-sm text-slate-400 mb-1">Nom complet</div>
-              <div className="text-white">{user.displayName}</div>
+              <div className="text-white">{user.displayName || 'Non défini'}</div>
             </div>
 
             <div>
               <div className="block text-sm text-slate-400 mb-1">Email</div>
-              <div className="text-white">{user.email}</div>
+              <div className="text-white">{user.email || 'Non défini'}</div>
             </div>
 
             <div>
               <div className="block text-sm text-slate-400 mb-1">2FA</div>
               <div className="flex items-center space-x-2">
                 <FaShieldAlt
-                  className={user.twoFAEnabled ? "text-green-400" : "text-red-400"}
+                  className={user.twoFAEnabled === true ? "text-green-400" : "text-red-400"}
                 />
-                <span className={user.twoFAEnabled ? "text-green-400" : "text-red-400"}>
-                  {user.twoFAEnabled ? "Activé" : "Désactivé"}
+                <span className={user.twoFAEnabled === true ? "text-green-400" : "text-red-400"}>
+                  {user.twoFAEnabled === true ? "Activé" : "Désactivé"}
                 </span>
               </div>
             </div>

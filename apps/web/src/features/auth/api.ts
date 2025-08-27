@@ -58,6 +58,7 @@ async function apiFetch<T>(
 
 export const AuthAPI = {
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
+    const { token } = useCsrfStore.getState();
     const fullUrl = `${API_BASE_URL}/api/v1/auth/login`;
 
     console.log('📤 Envoi login avec données:', credentials); // Debug log
@@ -66,6 +67,7 @@ export const AuthAPI = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { "X-CSRF-TOKEN": token } : {}),
       },
       body: JSON.stringify(credentials),
       credentials: "include",
@@ -81,16 +83,21 @@ export const AuthAPI = {
   },
 
   register: async (userData: RegisterRequest): Promise<RegisterResponse> => {
+    const { token } = useCsrfStore.getState();
     const fullUrl = `${API_BASE_URL}/api/v1/auth/register`;
 
-    console.log('📤 Envoi register avec données:', userData); // Debug log
+    // On enlève le csrfToken du body car il doit être dans les headers
+    const { csrfToken, ...userDataWithoutCsrf } = userData;
+
+    console.log('📤 Envoi register avec données:', userDataWithoutCsrf); // Debug log
 
     const res = await fetch(fullUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { "X-CSRF-TOKEN": token } : {}),
       },
-      body: JSON.stringify(userData),
+      body: JSON.stringify(userDataWithoutCsrf),
       credentials: "include",
     });
 
@@ -116,7 +123,31 @@ export const AuthAPI = {
   },
 
   getMe: async () => {
-    return apiFetch("/api/v1/me");
+    try {
+      const response = await apiFetch("/api/v1/me");
+      console.log('📊 AuthAPI.getMe - Réponse de l\'API:', response);
+      
+      // Si la réponse n'est pas dans le format attendu, transformons-la
+      if (response && typeof response === 'object') {
+        // S'assurer que toutes les propriétés requises existent
+        const user = {
+          id: (response as any).id || (response as any).userId || '',
+          email: (response as any).email || '',
+          displayName: (response as any).displayName || (response as any).username || (response as any).email || 'Utilisateur',
+          twoFAEnabled: (response as any).twoFAEnabled === true,
+          createdAt: (response as any).createdAt || new Date().toISOString(),
+          updatedAt: (response as any).updatedAt || new Date().toISOString()
+        };
+        
+        console.log('🔄 AuthAPI.getMe - Objet utilisateur normalisé:', user);
+        return user;
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('❌ AuthAPI.getMe - Erreur lors de la récupération des informations utilisateur:', error);
+      throw error;
+    }
   },
 };
 

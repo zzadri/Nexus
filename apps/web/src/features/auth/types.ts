@@ -35,6 +35,7 @@ export interface LoginResponse {
   success: boolean;
   user?: User;
   token?: string;
+  accessToken?: string;  // Ajouté pour supporter la réponse de l'API
   requiresMfa?: boolean;
   mfaToken?: string;
 }
@@ -42,7 +43,8 @@ export interface LoginResponse {
 export interface RegisterResponse {
   success: boolean;
   user: User;
-  token: string;
+  token?: string;
+  accessToken?: string;  // Ajouté pour supporter la réponse de l'API
 }
 
 export interface RefreshResponse {

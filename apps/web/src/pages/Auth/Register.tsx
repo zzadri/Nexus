@@ -37,8 +37,14 @@ const Register: React.FC = () => {
 
     // Rediriger si déjà connecté
     useEffect(() => {
+        console.log('🔄 Register - État d\'authentification changé:', { isAuthenticated });
         if (isAuthenticated) {
-            navigate("/dashboard");
+            console.log('📲 Register - Redirection vers dashboard');
+            // Forcer la redirection vers le dashboard
+            setTimeout(() => {
+                console.log('⏱️ Register - Redirection forcée après délai');
+                navigate("/dashboard", { replace: true });
+            }, 100);
         }
     }, [isAuthenticated, navigate]);
 

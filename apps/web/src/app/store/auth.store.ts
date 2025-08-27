@@ -24,6 +24,11 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
+      // Log lors de la création initiale du store
+      _onInit: () => {
+        console.log('🏗️ AuthStore - Initialisation du store', 
+          localStorage.getItem('auth-storage') ? 'avec données persistées' : 'sans données persistées');
+      },
       user: null,
       token: null,
       loading: false,
@@ -36,6 +41,7 @@ export const useAuthStore = create<AuthState>()(
           console.log('📤 Données de connexion avec CSRF:', credentials); // Debug log
 
           const response = await AuthAPI.login(credentials);
+          console.log('🔐 Réponse de login:', response); // Debug log
 
           if (response.requiresMfa) {
             // TODO: Handle MFA flow - implementer plus tard
@@ -43,14 +49,29 @@ export const useAuthStore = create<AuthState>()(
             return false;
           }
 
-          if (response.user && response.token) {
+          // Vérifier si on a soit un token soit un accessToken
+          const token = response.token || response.accessToken;
+          
+          if (response.user && typeof token === 'string') {
+            console.log('✅ Login réussi, mise à jour du store avec token et user:', { 
+              user: response.user, 
+              hasToken: true
+            });
+            
             set({
               user: response.user,
-              token: response.token,
+              token: token,
               loading: false,
               isAuthenticated: true,
               error: null
             });
+            
+            console.log('📊 Nouvel état après login:', {
+              isAuthenticated: true,
+              hasUser: !!response.user,
+              hasToken: !!response.token
+            });
+            
             showToast.success("Connexion réussie ! Bienvenue.");
             return true;
           }
@@ -72,15 +93,31 @@ export const useAuthStore = create<AuthState>()(
           console.log('📤 Données d\'inscription avec CSRF:', userData); // Debug log
 
           const response = await AuthAPI.register(userData);
+          console.log('🔐 Réponse de register:', response); // Debug log
 
-          if (response.user && response.token) {
+          // Vérifier si on a soit un token soit un accessToken
+          const token = response.token || response.accessToken;
+          
+          if (response.user && typeof token === 'string') {
+            console.log('✅ Register réussi, mise à jour du store avec token et user:', { 
+              user: response.user, 
+              hasToken: true
+            });
+            
             set({
               user: response.user,
-              token: response.token,
+              token: token,
               loading: false,
               isAuthenticated: true,
               error: null
             });
+            
+            console.log('📊 Nouvel état après register:', {
+              isAuthenticated: true,
+              hasUser: !!response.user,
+              hasToken: !!response.token
+            });
+            
             showToast.success("Compte créé avec succès ! Bienvenue.");
             return true;
           }
@@ -134,19 +171,71 @@ export const useAuthStore = create<AuthState>()(
 
       checkAuth: async () => {
         const state = get();
-        if (state.isAuthenticated && state.user && state.token) {
-          // Vérifier si l'authentification est toujours valide
+        console.log('🔍 CheckAuth - Vérification de l\'état d\'authentification:', {
+          isAuthenticated: state.isAuthenticated,
+          hasUser: !!state.user,
+          hasToken: !!state.token
+        });
+        
+        // Si on a déjà un user et un token, considérons-nous comme authentifié
+        if (state.user && state.token && !state.isAuthenticated) {
+          console.log('⚠️ CheckAuth - Correction auto de isAuthenticated car user et token présents');
+          set({ isAuthenticated: true });
+          return;
+        }
+        
+        // Si on a un token (avec ou sans user), tenter une vérification d'API
+        if (state.token) {
+          console.log('🔍 CheckAuth - Token présent, vérification API');
           try {
-            await AuthAPI.getMe();
-          } catch (err) {
-            // Token invalide, déconnecter l'utilisateur
-            console.error("Auth check failed:", err);
+            const userData = await AuthAPI.getMe() as User;
+            console.log('✅ CheckAuth - API réussie, utilisateur authentifié:', userData);
+            
+            // S'assurer que toutes les propriétés requises sont présentes
+            const normalizedUser: User = {
+              id: userData.id || (state.user?.id || ''),
+              email: userData.email || (state.user?.email || ''),
+              displayName: userData.displayName || (state.user?.displayName || userData.email || 'Utilisateur'),
+              twoFAEnabled: userData.twoFAEnabled === true,
+              createdAt: userData.createdAt || (state.user?.createdAt || new Date().toISOString()),
+              updatedAt: userData.updatedAt || (state.user?.updatedAt || new Date().toISOString())
+            };
+            
+            // Mettre à jour les informations utilisateur
+            console.log('🔄 CheckAuth - Mise à jour des données utilisateur normalisées');
             set({
-              user: null,
-              token: null,
-              isAuthenticated: false
+              user: normalizedUser,
+              isAuthenticated: true
             });
+          } catch (err) {
+            console.error("❌ CheckAuth - Échec de la vérification API:", err);
+            
+            // Seulement si l'erreur est 401/403, on déconnecte
+            // Sinon, on garde l'état actuel pour éviter les déconnexions en cas de problème réseau temporaire
+            if (err && typeof err === 'object' && 'status' in err && 
+                ([401, 403].includes((err as any).status))) {
+              console.log('� CheckAuth - Erreur d\'authentification 401/403, déconnexion');
+              set({
+                user: null,
+                token: null,
+                isAuthenticated: false
+              });
+            } else {
+              console.log('⚠️ CheckAuth - Erreur non fatale, conservation de l\'état actuel');
+              // Si on a déjà un user, le garder
+              if (state.user) {
+                console.log('🔄 CheckAuth - Conservation de l\'utilisateur actuel');
+                set({ isAuthenticated: true });
+              }
+            }
           }
+        } else if (!state.token && state.isAuthenticated) {
+          // Incohérence : authentifié mais sans token
+          console.warn('⚠️ CheckAuth - Incohérence : authentifié sans token, réinitialisation');
+          set({
+            isAuthenticated: false,
+            user: null
+          });
         }
       },
 
@@ -163,6 +252,27 @@ export const useAuthStore = create<AuthState>()(
         token: state.token,
         isAuthenticated: state.isAuthenticated
       }),
+      onRehydrateStorage: (state) => {
+        return (rehydratedState, error) => {
+          if (error) {
+            console.error('❌ AuthStore - Erreur lors de la réhydratation du state:', error);
+          }
+          
+          if (rehydratedState) {
+            console.log('🔄 AuthStore - État réhydraté:', { 
+              isAuthenticated: rehydratedState.isAuthenticated,
+              hasUser: !!rehydratedState.user,
+              hasToken: !!rehydratedState.token
+            });
+            
+            // S'assurer que l'état est cohérent après réhydratation
+            if (rehydratedState.token && rehydratedState.user && !rehydratedState.isAuthenticated) {
+              console.log('⚠️ AuthStore - Incohérence détectée, correction de isAuthenticated');
+              rehydratedState.isAuthenticated = true;
+            }
+          }
+        };
+      },
     }
   )
 );
