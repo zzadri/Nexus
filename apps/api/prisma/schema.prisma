@@ -1,0 +1,266 @@
+// prisma/schema.prisma
+
+// ---------- Generators & Datasource ----------
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+  OWNER
+}
+
+enum Visibility {
+  PRIVATE
+  UNLISTED
+  PUBLIC
+}
+
+enum Provider {
+  LOCAL
+  AZUREAD
+}
+
+enum ReactionType {
+  LIKE
+  LOVE
+  INSIGHT
+  QUESTION
+}
+
+enum ReportStatus {
+  OPEN
+  UNDER_REVIEW
+  CLOSED
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+// ---------- Models ----------
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  emailVerified       DateTime?
+  provider            Provider  @default(LOCAL)
+  providerId          String?
+  passwordHash        String?
+  twoFAEnabled        Boolean   @default(false)
+  twoFASecretEnc      String? // secret TOTP chiffré (AES-GCM)
+  twoFARecoveryHashes String[]  @default([]) // hashes SHA-256
+  displayName         String
+  handle              String    @unique
+  bio                 String?
+  avatarUrl           String?
+  role                Role      @default(USER)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // relations
+  sessions      Session[]
+  memberships   Membership[]
+  posts         Post[]
+  comments      Comment[]
+  reactions     Reaction[]
+  assets        StorageAsset[] // fichiers S3 (remplace FileObject)
+  notifications Notification[]
+  reports       Report[]       @relation("ReportsByUser")
+  Group         Group[]
+
+  @@index([email])
+  @@index([handle])
+}
+
+model Session {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String   @unique
+  userAgent        String?
+  ip               String?
+  createdAt        DateTime @default(now())
+  expiresAt        DateTime
+
+  @@index([userId])
+}
+
+model Group {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique // pour l’accès par slug dans services/routes
+  description String?
+  visibility  Visibility @default(PRIVATE)
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  members      Membership[]
+  posts        Post[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  StorageAsset StorageAsset[]
+  Report       Report[]
+
+  @@index([createdById])
+  @@index([visibility])
+}
+
+model Membership {
+  id        String         @id @default(cuid())
+  userId    String
+  groupId   String
+  role      MembershipRole @default(MEMBER)
+  createdAt DateTime       @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId]) // un membre par groupe une seule fois
+  @@index([groupId])
+  @@index([userId])
+}
+
+model Post {
+  id         String     @id @default(cuid())
+  title      String
+  slug       String     @unique
+  content    String // utilisé par posts.service
+  kind       String // "doc" | "video" | "note" | "link" | "file" (côté app)
+  visibility Visibility @default(PUBLIC)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  groupId String?
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  // tags via table de jointure
+  tags TagOnPost[]
+
+  comments     Comment[]
+  reactions    Reaction[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  StorageAsset StorageAsset[]
+  Report       Report[]
+
+  @@index([authorId])
+  @@index([groupId])
+  @@index([visibility])
+  @@index([slug])
+}
+
+model Tag {
+  id    String @id @default(cuid())
+  label String @unique
+
+  posts TagOnPost[]
+}
+
+model TagOnPost {
+  postId String
+  tagId  String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([authorId])
+}
+
+model Reaction {
+  id        String       @id @default(cuid())
+  postId    String
+  userId    String
+  type      ReactionType
+  createdAt DateTime     @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 1 réaction par user/post (type modifiable)
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model StorageAsset {
+  id         String   @id @default(cuid())
+  key        String   @unique
+  bucket     String
+  kind       String // 'image' | 'video' | 'pdf' | 'file'
+  size       Int
+  mimeType   String
+  sha256     String?
+  uploaderId String
+  postId     String?
+  groupId    String?
+  createdAt  DateTime @default(now())
+
+  uploader User   @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  post     Post?  @relation(fields: [postId], references: [id], onDelete: SetNull)
+  group    Group? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  @@index([uploaderId])
+  @@index([postId])
+  @@index([groupId])
+  @@index([bucket])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  kind      String // e.g. "COMMENT","REACTION","INVITE"
+  data      Json
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
+
+model Report {
+  id         String       @id @default(cuid())
+  postId     String?
+  commentId  String?
+  groupId    String?
+  reporterId String
+  reason     String
+  details    String?
+  status     ReportStatus @default(OPEN)
+  createdAt  DateTime     @default(now())
+
+  post     Post?  @relation(fields: [postId], references: [id], onDelete: SetNull)
+  group    Group? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  reporter User   @relation("ReportsByUser", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([groupId])
+  @@index([reporterId])
+}

@@ -1,0 +1,52 @@
+// src/plugins/security.ts (ou équivalent)
+import fp from 'fastify-plugin';
+import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import cookie from '@fastify/cookie';
+import jwt from '@fastify/jwt';
+import rateLimit from '@fastify/rate-limit';
+import { env } from '../env.js';
+
+export default fp(async (app) => {
+  await app.register(cookie, { secret: env.COOKIE_SECRET });
+  await app.register(helmet);
+
+  await app.register(cors, {
+    origin(origin, cb) {
+      // Pas d’origin => requêtes server-to-server / curl / Swagger via le même host : OK
+      if (!origin) return cb(null, true);
+
+      const allowed = new Set([
+        env.WEB_ORIGIN,
+        env.SWAGGER_ORIGIN,
+        `http://localhost:${env.PORT}`,
+        `http://127.0.0.1:${env.PORT}`,
+      ]);
+
+      cb(null, allowed.has(origin));
+    },
+    credentials: true,
+    methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+    allowedHeaders: ['Content-Type','X-CSRF-Token','Authorization'],
+    exposedHeaders: ['set-cookie'],
+  });
+
+  await app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
+
+  await app.register(jwt, {
+    secret: env.JWT_ACCESS_SECRET,
+    cookie: { cookieName: 'access_token', signed: false },
+  });
+
+  app.decorate('issueAccess', (user: { id: string; role: string }) =>
+    app.jwt.sign({ sub: user.id, role: user.role }, { expiresIn: '10m' })
+  );
+
+  app.decorate('cookieBase', {
+    httpOnly: true,
+    sameSite: 'strict' as const,
+    path: '/',
+    secure: env.NODE_ENV !== 'development',
+    domain: env.COOKIE_DOMAIN || undefined,
+  });
+});
