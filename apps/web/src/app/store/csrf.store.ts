@@ -13,7 +13,7 @@ export const useCsrfStore = create<CsrfState>((set) => ({
       const token = await fetchCsrfToken();
       console.log('✓ Token CSRF récupéré et stocké dans le store:', token);
       set({ token });
-      
+
       // Vérifie que le cookie CSRF est présent
       const cookies = document.cookie.split(';');
       console.log('Cookies disponibles dans le navigateur:', cookies.map(c => c.trim()).join(', '));

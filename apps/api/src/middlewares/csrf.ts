@@ -53,7 +53,7 @@ export const csrfGuard: FastifyPluginAsync = async (app) => {
 
     // 👇 setCookie est typé via @fastify/cookie
     console.log('🔑 Génération nouveau token CSRF:', token, 'domaine:', env.COOKIE_DOMAIN || 'default');
-    
+
     res.setCookie(env.CSRF_COOKIE_NAME, token, {
       httpOnly: false,           // token lisible par le front
       sameSite: env.NODE_ENV === 'development' ? 'lax' : 'strict', // Utiliser 'lax' en dev pour faciliter les tests

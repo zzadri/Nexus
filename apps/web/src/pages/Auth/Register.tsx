@@ -39,11 +39,11 @@ const Register: React.FC = () => {
     useEffect(() => {
         console.log('🔄 Register - État d\'authentification changé:', { isAuthenticated });
         if (isAuthenticated) {
-            console.log('📲 Register - Redirection vers dashboard');
-            // Forcer la redirection vers le dashboard
+            console.log('📲 Register - Redirection vers la page d\'accueil');
+            // Forcer la redirection vers la page d'accueil
             setTimeout(() => {
                 console.log('⏱️ Register - Redirection forcée après délai');
-                navigate("/dashboard", { replace: true });
+                navigate("/", { replace: true });
             }, 100);
         }
     }, [isAuthenticated, navigate]);
@@ -147,7 +147,7 @@ const Register: React.FC = () => {
             });
 
             if (success) {
-                navigate("/dashboard");
+                navigate("/");
             }
         } catch (err) {
             if (err instanceof ApiError && err.status === 403) {

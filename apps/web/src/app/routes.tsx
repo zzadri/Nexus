@@ -6,7 +6,7 @@ import { useAuthStore } from "./store/auth.store";
 import Landing from "../pages/Landing/Landing";
 import Login from "../pages/Auth/Login";
 import Register from "../pages/Auth/Register";
-import Dashboard from "../pages/Dashboard/Dashboard";
+import Home from "../pages/Home/Home";
 
 // Protection des routes
 interface ProtectedRouteProps {
@@ -17,15 +17,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, user, token, checkAuth } = useAuthStore();
   const [authChecked, setAuthChecked] = React.useState(false);
   const [authStatus, setAuthStatus] = React.useState<'checking'|'authenticated'|'unauthenticated'>('checking');
-  
-  console.log('🛡️ ProtectedRoute - Vérification accès route protégée:', { 
+
+  console.log('🛡️ ProtectedRoute - Vérification accès route protégée:', {
     isAuthenticated,
     hasUser: !!user,
     hasToken: !!token,
     authChecked,
     authStatus
   });
-  
+
   // Si on a un token et un user, considérer comme authentifié
   React.useEffect(() => {
     if (user && token) {
@@ -34,19 +34,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         console.log('🔄 ProtectedRoute - Correction de l\'état d\'authentification');
         useAuthStore.setState({ isAuthenticated: true });
       }
-      
+
       if (authStatus !== 'authenticated') {
         setAuthStatus('authenticated');
       }
     }
   }, [isAuthenticated, user, token, authStatus]);
-  
+
   // Vérification au chargement de la route
   React.useEffect(() => {
     const verifyAuth = async () => {
       if (!authChecked) {
         console.log('🔍 ProtectedRoute - Vérification initiale');
-        
+
         // Si on a déjà les signes d'une authentification, accepter immédiatement
         if (user && token) {
           console.log('✅ ProtectedRoute - User et token présents, acceptation immédiate');
@@ -54,7 +54,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           setAuthChecked(true);
           return;
         }
-        
+
         try {
           // Sinon tenter une vérification API
           await checkAuth();
@@ -64,7 +64,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
             hasUser: !!currentState.user,
             hasToken: !!currentState.token
           });
-          
+
           if (currentState.user && currentState.token) {
             setAuthStatus('authenticated');
           } else {
@@ -72,7 +72,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           }
         } catch (err) {
           console.error('❌ ProtectedRoute - Erreur lors de la vérification:', err);
-          
+
           // Même en cas d'erreur, si on a user et token, continuer
           const currentState = useAuthStore.getState();
           if (currentState.user && currentState.token) {
@@ -86,7 +86,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         }
       }
     };
-    
+
     verifyAuth();
   }, [checkAuth, authChecked, user, token]);
 
@@ -99,7 +99,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       </div>
     );
   }
-  
+
   // Une fois la vérification terminée
   if (authStatus === 'authenticated') {
     console.log('✅ ProtectedRoute - Accès autorisé à la route protégée');
@@ -113,8 +113,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 const PublicRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, user, token } = useAuthStore();
   const [redirectionChecked, setRedirectionChecked] = React.useState(false);
-  
-  console.log('🔓 PublicRoute - Vérification accès route publique:', { 
+
+  console.log('🔓 PublicRoute - Vérification accès route publique:', {
     isAuthenticated,
     hasUser: !!user,
     hasToken: !!token
@@ -131,21 +131,21 @@ const PublicRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         });
         setRedirectionChecked(true);
       }, 500);
-      
+
       return () => clearTimeout(timer);
     }
   }, [redirectionChecked]);
-  
+
   // Si on attend la vérification, montrer le contenu public par défaut
   if (!redirectionChecked) {
     return <>{children}</>;
   }
-  
+
   // Vérification cohérente : considérer comme authentifié si on a user et token
   const currentState = useAuthStore.getState();
-  const shouldRedirect = currentState.isAuthenticated || 
+  const shouldRedirect = currentState.isAuthenticated ||
     (!!currentState.user && !!currentState.token);
-  
+
   return !shouldRedirect ? (
     <>
       {console.log('✅ PublicRoute - Accès autorisé à la route publique')}
@@ -153,8 +153,8 @@ const PublicRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     </>
   ) : (
     <>
-      {console.log('🔄 PublicRoute - Redirection vers dashboard (déjà authentifié)')}
-      <Navigate to="/dashboard" replace />
+      {console.log('🔄 PublicRoute - Redirection vers la page d\'accueil (déjà authentifié)')}
+      <Navigate to="/" replace />
     </>
   );
 };
@@ -162,9 +162,19 @@ const PublicRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      {/* Routes publiques */}
+      {/* Route d'accueil */}
       <Route
         path="/"
+        element={
+          <ProtectedRoute>
+            <Home />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Routes publiques */}
+      <Route
+        path="/welcome"
         element={
           <PublicRoute>
             <Landing />
@@ -188,18 +198,8 @@ export const AppRoutes: React.FC = () => {
         }
       />
 
-      {/* Routes protégées */}
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-
       {/* Redirection par défaut */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/welcome" replace />} />
     </Routes>
   );
 };

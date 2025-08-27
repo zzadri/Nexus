@@ -26,7 +26,7 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       // Log lors de la création initiale du store
       _onInit: () => {
-        console.log('🏗️ AuthStore - Initialisation du store', 
+        console.log('🏗️ AuthStore - Initialisation du store',
           localStorage.getItem('auth-storage') ? 'avec données persistées' : 'sans données persistées');
       },
       user: null,
@@ -51,13 +51,13 @@ export const useAuthStore = create<AuthState>()(
 
           // Vérifier si on a soit un token soit un accessToken
           const token = response.token || response.accessToken;
-          
+
           if (response.user && typeof token === 'string') {
-            console.log('✅ Login réussi, mise à jour du store avec token et user:', { 
-              user: response.user, 
+            console.log('✅ Login réussi, mise à jour du store avec token et user:', {
+              user: response.user,
               hasToken: true
             });
-            
+
             set({
               user: response.user,
               token: token,
@@ -65,13 +65,13 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: true,
               error: null
             });
-            
+
             console.log('📊 Nouvel état après login:', {
               isAuthenticated: true,
               hasUser: !!response.user,
               hasToken: !!response.token
             });
-            
+
             showToast.success("Connexion réussie ! Bienvenue.");
             return true;
           }
@@ -97,13 +97,13 @@ export const useAuthStore = create<AuthState>()(
 
           // Vérifier si on a soit un token soit un accessToken
           const token = response.token || response.accessToken;
-          
+
           if (response.user && typeof token === 'string') {
-            console.log('✅ Register réussi, mise à jour du store avec token et user:', { 
-              user: response.user, 
+            console.log('✅ Register réussi, mise à jour du store avec token et user:', {
+              user: response.user,
               hasToken: true
             });
-            
+
             set({
               user: response.user,
               token: token,
@@ -111,13 +111,13 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: true,
               error: null
             });
-            
+
             console.log('📊 Nouvel état après register:', {
               isAuthenticated: true,
               hasUser: !!response.user,
               hasToken: !!response.token
             });
-            
+
             showToast.success("Compte créé avec succès ! Bienvenue.");
             return true;
           }
@@ -176,21 +176,21 @@ export const useAuthStore = create<AuthState>()(
           hasUser: !!state.user,
           hasToken: !!state.token
         });
-        
+
         // Si on a déjà un user et un token, considérons-nous comme authentifié
         if (state.user && state.token && !state.isAuthenticated) {
           console.log('⚠️ CheckAuth - Correction auto de isAuthenticated car user et token présents');
           set({ isAuthenticated: true });
           return;
         }
-        
+
         // Si on a un token (avec ou sans user), tenter une vérification d'API
         if (state.token) {
           console.log('🔍 CheckAuth - Token présent, vérification API');
           try {
             const userData = await AuthAPI.getMe() as User;
             console.log('✅ CheckAuth - API réussie, utilisateur authentifié:', userData);
-            
+
             // S'assurer que toutes les propriétés requises sont présentes
             const normalizedUser: User = {
               id: userData.id || (state.user?.id || ''),
@@ -200,7 +200,7 @@ export const useAuthStore = create<AuthState>()(
               createdAt: userData.createdAt || (state.user?.createdAt || new Date().toISOString()),
               updatedAt: userData.updatedAt || (state.user?.updatedAt || new Date().toISOString())
             };
-            
+
             // Mettre à jour les informations utilisateur
             console.log('🔄 CheckAuth - Mise à jour des données utilisateur normalisées');
             set({
@@ -209,10 +209,10 @@ export const useAuthStore = create<AuthState>()(
             });
           } catch (err) {
             console.error("❌ CheckAuth - Échec de la vérification API:", err);
-            
+
             // Seulement si l'erreur est 401/403, on déconnecte
             // Sinon, on garde l'état actuel pour éviter les déconnexions en cas de problème réseau temporaire
-            if (err && typeof err === 'object' && 'status' in err && 
+            if (err && typeof err === 'object' && 'status' in err &&
                 ([401, 403].includes((err as any).status))) {
               console.log('� CheckAuth - Erreur d\'authentification 401/403, déconnexion');
               set({
@@ -257,14 +257,14 @@ export const useAuthStore = create<AuthState>()(
           if (error) {
             console.error('❌ AuthStore - Erreur lors de la réhydratation du state:', error);
           }
-          
+
           if (rehydratedState) {
-            console.log('🔄 AuthStore - État réhydraté:', { 
+            console.log('🔄 AuthStore - État réhydraté:', {
               isAuthenticated: rehydratedState.isAuthenticated,
               hasUser: !!rehydratedState.user,
               hasToken: !!rehydratedState.token
             });
-            
+
             // S'assurer que l'état est cohérent après réhydratation
             if (rehydratedState.token && rehydratedState.user && !rehydratedState.isAuthenticated) {
               console.log('⚠️ AuthStore - Incohérence détectée, correction de isAuthenticated');

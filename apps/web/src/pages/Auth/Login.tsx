@@ -21,11 +21,11 @@ const Login: React.FC = () => {
   useEffect(() => {
     console.log('🔄 Login - État d\'authentification changé:', { isAuthenticated });
     if (isAuthenticated) {
-      console.log('📲 Login - Redirection vers dashboard');
-      // Forcer la redirection vers le dashboard
+      console.log('📲 Login - Redirection vers home');
+      // Forcer la redirection vers la page d'accueil
       setTimeout(() => {
         console.log('⏱️ Login - Redirection forcée après délai');
-        navigate("/dashboard", { replace: true });
+        navigate("/home", { replace: true });
       }, 100);
     }
   }, [isAuthenticated, navigate]);
@@ -35,10 +35,10 @@ const Login: React.FC = () => {
     console.log('🔄 Login - Tentative de soumission du formulaire');
 
     if (!email || !password || !csrfToken) {
-      console.warn('❌ Login - Données de formulaire incomplètes:', { 
-        hasEmail: !!email, 
-        hasPassword: !!password, 
-        hasCsrfToken: !!csrfToken 
+      console.warn('❌ Login - Données de formulaire incomplètes:', {
+        hasEmail: !!email,
+        hasPassword: !!password,
+        hasCsrfToken: !!csrfToken
       });
       return;
     }
@@ -48,25 +48,25 @@ const Login: React.FC = () => {
       console.log('🔄 Login - Appel à la fonction login du store');
       const success = await login({ email, password, csrfToken });
       console.log('📊 Login - Résultat de la tentative de connexion:', { success });
-      
+
       // Vérifier l'état d'authentification après la connexion
       const currentState = useAuthStore.getState();
-      console.log('🔍 Login - État actuel après tentative:', { 
+      console.log('🔍 Login - État actuel après tentative:', {
         isAuthenticated: currentState.isAuthenticated,
         hasUser: !!currentState.user,
         hasToken: !!currentState.token
       });
-      
+
       if (success) {
-        console.log('📲 Login - Tentative de redirection manuelle vers dashboard');
+        console.log('📲 Login - Tentative de redirection manuelle vers la page d\'accueil');
         setTimeout(() => {
           console.log('⏱️ Login - Forçage de la redirection après délai');
-          window.location.href = '/dashboard'; // Redirection forcée en dernier recours
+          window.location.href = '/'; // Redirection forcée en dernier recours
         }, 300);
       }
     } catch (err) {
       console.error('❌ Login - Erreur lors de la tentative de connexion:', err);
-      
+
       if (err instanceof ApiError && err.status === 403) {
         setCsrfError(true);
         console.log('🔄 Login - Tentative de rafraîchissement du token CSRF après erreur 403');

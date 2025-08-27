@@ -7,7 +7,7 @@ export class AuthController {
   static async register(req: FastifyRequest, res: FastifyReply) {
     console.log('⚡ Tentative d\'inscription reçue:', req.body);
     console.log('⚡ Headers reçus:', req.headers);
-    
+
     try {
       const { email, password, displayName, csrfToken } = RegisterBodyZ.parse(req.body);
       console.log('⚡ Données d\'inscription validées:', { email, displayName, hasPassword: !!password, csrfToken });
@@ -43,7 +43,7 @@ export class AuthController {
   static async login(req: FastifyRequest, res: FastifyReply) {
     console.log('⚡ Tentative de connexion reçue:', req.body);
     console.log('⚡ Headers reçus:', req.headers);
-    
+
     try {
       const { email, password, csrfToken } = LoginBodyZ.parse(req.body);
       console.log('⚡ Données de connexion validées:', { email, hasPassword: !!password, csrfToken });
@@ -84,7 +84,7 @@ export class AuthController {
   static async loginTotp(req: FastifyRequest, res: FastifyReply) {
     try {
       console.log('⚡ Tentative de validation TOTP reçue:', req.body);
-      
+
       const { mfaToken, code } = LoginTotpBodyZ.parse(req.body);
       const payload = AuthService.verifyMfaToken(mfaToken);
       if (!payload) return res.code(401).send({ error: 'MFA_TOKEN_INVALID' });
