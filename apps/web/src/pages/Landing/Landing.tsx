@@ -47,7 +47,7 @@ const Landing: React.FC = () => {
   };
 
   return (
-    <main className="bg-slate-900 text-slate-100 min-h-screen" style={{scrollBehavior: 'smooth'}}>
+    <main className="bg-slate-900 text-slate-100 min-h-screen scroll-smooth">
       {/* HERO */}
       <section className="relative overflow-clip">
         {/* Background avec dégradé responsive */}
