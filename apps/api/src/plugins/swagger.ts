@@ -13,8 +13,8 @@ export default fp(async (app) => {
     openapi: {
       openapi: '3.1.0',
       info: {
-        title: 'SocialIT API',
-        description: 'Documentation de l’API SocialIT',
+        title: 'Nexus API',
+        description: 'Documentation de l’API Nexus',
         version: '1.0.0'
       },
       servers: [{ url: process.env.API_PUBLIC_URL ?? 'http://localhost:3001' }],
