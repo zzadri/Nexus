@@ -6,7 +6,7 @@ import PopularPasswords from './PopularPasswords';
 export const loadMostPopularPasswords = async (): Promise<void> => {
   try {
     // En développement, on peut charger le fichier directement
-    const response = await fetch('/src/lib/password-quality/MostPopularPasswords.txt');
+    const response = await fetch('/password-quality/MostPopularPasswords.txt');
     const text = await response.text();
 
     const passwordList = text
